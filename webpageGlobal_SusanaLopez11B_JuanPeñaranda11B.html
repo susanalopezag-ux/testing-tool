@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hypothesis Testing — Interactive Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────────── */
+:root{
+  --bg:#0d0f14;--surface:#14171f;--surface2:#1c2030;
+  --border:#272c3d;--accent:#e8c84a;--accent2:#4ae8a8;
+  --danger:#e85a4a;--text:#e8eaf0;--muted:#8a90a8;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:12px;--rs:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;line-height:1.6}
+
+/* ─── HEADER ────────────────────────────────────────────────── */
+header{position:relative;overflow:hidden;padding:3.5rem 2rem 2.5rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.header-inner{max-width:900px;margin:0 auto;position:relative;z-index:1}
+.header-label{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem}
+header h1{font-family:var(--serif);font-size:clamp(2.4rem,5vw,4rem);line-height:1.05;font-weight:400}
+header h1 em{font-style:italic;color:var(--accent)}
+.header-sub{margin-top:.5rem;color:var(--muted);font-size:.85rem;font-family:var(--mono)}
+.header-deco{position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;border:60px solid rgba(232,200,74,.05);pointer-events:none}
+
+/* ─── TABS ───────────────────────────────────────────────────── */
+.tab-nav{display:flex;background:var(--surface);border-bottom:2px solid var(--border);padding:0 2rem}
+.tab-btn{display:flex;align-items:center;gap:.55rem;padding:1rem 1.6rem;background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;font-family:var(--sans);font-size:.88rem;font-weight:500;color:var(--muted);transition:all .2s;margin-bottom:-2px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-icon{font-size:1.1rem;font-family:var(--mono)}
+.tab-btn em{font-style:normal;font-size:.7rem;background:var(--surface2);color:var(--muted);padding:2px 6px;border-radius:4px;font-family:var(--mono);margin-left:4px}
+.tab-btn.active em{background:rgba(232,200,74,.15);color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ─── GRID ───────────────────────────────────────────────────── */
+.panel-grid{display:grid;grid-template-columns:320px 1fr;gap:2rem;max-width:1100px;margin:0 auto;padding:2rem;align-items:start}
+@media(max-width:760px){.panel-grid{grid-template-columns:1fr}}
+
+/* ─── PANELS ─────────────────────────────────────────────────── */
+.controls-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.6rem;position:sticky;top:1rem}
+.output-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.6rem}
+.panel-title{font-family:var(--serif);font-size:1.4rem;font-weight:400;margin-bottom:1.4rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+
+/* ─── CONTROLS ───────────────────────────────────────────────── */
+.control-group{margin-bottom:1.2rem}
+.group-label{display:block;font-size:.75rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.seg-control{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden}
+.seg-btn{flex:1;padding:.45rem .5rem;border:none;background:none;cursor:pointer;font-family:var(--sans);font-size:.78rem;color:var(--muted);transition:all .15s;white-space:nowrap}
+.seg-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.seg-btn.active{background:var(--accent);color:#0d0f14;font-weight:600}
+.slider-row{display:grid;grid-template-columns:1fr 72px;align-items:center;gap:.6rem}
+input[type=range]{-appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer;transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.num-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.35rem .5rem;width:100%;text-align:center;outline:none;transition:border-color .15s}
+.num-box:focus{border-color:var(--accent)}
+
+/* ─── STAT CARDS ─────────────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:.9rem .8rem;text-align:center}
+.stat-label{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.stat-val{font-family:var(--mono);font-size:1.15rem;font-weight:500;color:var(--accent)}
+.stat-val.reject{color:var(--danger)}.stat-val.fail{color:var(--accent2)}
+
+/* ─── CANVAS ─────────────────────────────────────────────────── */
+.canvas-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;margin-bottom:1.2rem;text-align:center}
+canvas{max-width:100%;height:auto;display:block;margin:0 auto}
+
+/* ─── CONCLUSION ─────────────────────────────────────────────── */
+.conclusion-box{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--rs);padding:1rem 1.2rem;margin-bottom:1.2rem}
+.conclusion-box.reject-decision{border-left-color:var(--danger)}
+.conclusion-box.fail-decision{border-left-color:var(--accent2)}
+.conclusion-label{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:.4rem}
+.conclusion-box p{font-size:.88rem;line-height:1.6}
+
+/* ─── HYPOTHESES ─────────────────────────────────────────────── */
+.hypo-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.2rem}
+.hypo-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem}
+.hypo-label{color:var(--accent);font-weight:500;margin-right:.5rem}
+
+/* ─── ERROR CARDS ────────────────────────────────────────────── */
+.errors-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:1rem 1.2rem}
+.errors-title{font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.75rem}
+.errors-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.error-card{padding:.75rem;border-radius:var(--rs);font-size:.8rem}
+.error-card strong{display:block;margin-bottom:.3rem;font-size:.78rem}
+.error-card p{color:var(--muted);line-height:1.5}
+.type1{background:rgba(232,90,74,.1);border:1px solid rgba(232,90,74,.25)}.type1 strong{color:var(--danger)}
+.type2{background:rgba(74,232,168,.07);border:1px solid rgba(74,232,168,.2)}.type2 strong{color:var(--accent2)}
+
+/* ─── CSV ────────────────────────────────────────────────────── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r);padding:2rem 1rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1.4rem}
+.upload-zone:hover,.upload-zone.dragging{border-color:var(--accent);background:rgba(232,200,74,.06)}
+.upload-icon{font-size:2.2rem;margin-bottom:.5rem}
+.upload-zone p{font-size:.83rem;color:var(--muted);line-height:1.6}
+.styled-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.45rem .6rem;outline:none;cursor:pointer}
+.styled-select:focus{border-color:var(--accent)}
+.run-btn{width:100%;margin-top:.75rem;padding:.85rem;background:var(--accent);border:none;border-radius:var(--rs);color:#0d0f14;font-family:var(--sans);font-size:.9rem;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:opacity .15s,transform .1s}
+.run-btn:hover{opacity:.9;transform:translateY(-1px)}.run-btn:active{transform:translateY(0)}
+.sub-title{font-size:.85rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.75rem}
+.stats-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.8rem;margin-bottom:1.4rem}
+.stats-table th{text-align:left;padding:.5rem .75rem;background:var(--surface2);color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
+.stats-table td{padding:.55rem .75rem;border-bottom:1px solid var(--border)}
+.stats-table tr:last-child td{border-bottom:none}
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.empty-icon{font-size:3rem;margin-bottom:1rem}
+.empty-state p{font-size:.87rem;line-height:1.7}
+.empty-state code{background:var(--surface2);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:.78rem;color:var(--accent2)}
+
+/* ─── FOOTER ─────────────────────────────────────────────────── */
+footer{border-top:1px solid var(--border);padding:1.5rem 2rem;text-align:center;font-size:.78rem;color:var(--muted);font-family:var(--mono);line-height:2}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="header-label">Global Economics · Grade 11 · T3 L4</div>
+    <h1>Hypothesis<br><em>Testing</em></h1>
+    <p class="header-sub">Interactive statistical tool — C8 &amp; C9</p>
+  </div>
+  <div class="header-deco"></div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="manual">
+    <span class="tab-icon">⟨z⟩</span>
+    <span>Manual Mode <em>C8</em></span>
+  </button>
+  <button class="tab-btn" data-tab="csv">
+    <span class="tab-icon">⇪</span>
+    <span>CSV Mode <em>C9</em></span>
+  </button>
+</nav>
+
+<!-- ══════ C8 — MANUAL ══════ -->
+<section id="tab-manual" class="tab-panel active">
+  <div class="panel-grid">
+    <aside class="controls-panel">
+      <h2 class="panel-title">Parameters</h2>
+
+      <div class="control-group">
+        <label class="group-label">Calculation Mode</label>
+        <div class="seg-control" id="calcMode">
+          <button class="seg-btn active" data-mode="proportion">Proportion</button>
+          <button class="seg-btn" data-mode="mean">Mean</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="group-label">Test Direction</label>
+        <div class="seg-control" id="tailDir">
+          <button class="seg-btn active" data-dir="left">Left-tailed</button>
+          <button class="seg-btn" data-dir="two">Two-tailed</button>
+          <button class="seg-btn" data-dir="right">Right-tailed</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="group-label">Significance Level α</label>
+        <div class="slider-row">
+          <input type="range" id="alphaSlider" min="0.01" max="0.20" step="0.01" value="0.05"/>
+          <input type="number" id="alphaBox" min="0.01" max="0.20" step="0.01" value="0.05" class="num-box"/>
+        </div>
+      </div>
+
+      <!-- PROPORTION PARAMS -->
+      <div id="propParams">
+        <div class="control-group">
+          <label class="group-label">Benchmark Proportion p₀</label>
+          <div class="slider-row">
+            <input type="range" id="p0Slider" min="0.01" max="0.99" step="0.01" value="0.50"/>
+            <input type="number" id="p0Box" min="0.01" max="0.99" step="0.01" value="0.50" class="num-box"/>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Sample Proportion p̂</label>
+          <div class="slider-row">
+            <input type="range" id="pHatSlider" min="0.01" max="0.99" step="0.01" value="0.60"/>
+            <input type="number" id="pHatBox" min="0.01" max="0.99" step="0.01" value="0.60" class="num-box"/>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Sample Size n</label>
+          <div class="slider-row">
+            <input type="range" id="nPropSlider" min="10" max="1000" step="1" value="100"/>
+            <input type="number" id="nPropBox" min="10" max="1000" step="1" value="100" class="num-box"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEAN PARAMS -->
+      <div id="meanParams" style="display:none">
+        <div class="control-group">
+          <label class="group-label">Benchmark Mean μ₀</label>
+          <div class="slider-row">
+            <input type="range" id="mu0Slider" min="-100" max="100" step="0.5" value="0"/>
+            <input type="number" id="mu0Box" min="-100" max="100" step="0.5" value="0" class="num-box"/>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Sample Mean x̄</label>
+          <div class="slider-row">
+            <input type="range" id="xbarSlider" min="-100" max="100" step="0.5" value="5"/>
+            <input type="number" id="xbarBox" min="-100" max="100" step="0.5" value="5" class="num-box"/>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Standard Deviation σ (or SE)</label>
+          <div class="slider-row">
+            <input type="range" id="sdSlider" min="0.1" max="50" step="0.1" value="10"/>
+            <input type="number" id="sdBox" min="0.1" max="50" step="0.1" value="10" class="num-box"/>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Sample Size n</label>
+          <div class="slider-row">
+            <input type="range" id="nMeanSlider" min="2" max="1000" step="1" value="30"/>
+            <input type="number" id="nMeanBox" min="2" max="1000" step="1" value="30" class="num-box"/>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="output-panel">
+      <h2 class="panel-title">Results</h2>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">z-statistic</div><div class="stat-val" id="zVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">p-value</div><div class="stat-val" id="pVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Critical Value</div><div class="stat-val" id="critVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Decision</div><div class="stat-val" id="decision">—</div></div>
+      </div>
+      <div class="canvas-wrap"><canvas id="normalCurve" width="620" height="280"></canvas></div>
+      <div class="conclusion-box" id="conclusionBox">
+        <span class="conclusion-label">Conclusion</span>
+        <p id="conclusionText">Set the parameters and the result will appear here.</p>
+      </div>
+      <div class="hypo-row">
+        <div class="hypo-box"><span class="hypo-label">H₀</span><span id="h0Text">—</span></div>
+        <div class="hypo-box"><span class="hypo-label">H₁</span><span id="h1Text">—</span></div>
+      </div>
+      <div class="errors-box">
+        <h3 class="errors-title">Decision Errors</h3>
+        <div class="errors-grid">
+          <div class="error-card type1"><strong>Type I Error (α)</strong><p>Rejecting H₀ when it is actually true. Probability = α.</p></div>
+          <div class="error-card type2"><strong>Type II Error (β)</strong><p>Failing to reject H₀ when it is actually false. Probability = β.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ C9 — CSV ══════ -->
+<section id="tab-csv" class="tab-panel">
+  <div class="panel-grid">
+    <aside class="controls-panel">
+      <h2 class="panel-title">Upload Data</h2>
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">⇪</div>
+        <p>Drop a CSV file here<br>or click to browse</p>
+        <input type="file" id="csvFile" accept=".csv" hidden/>
+      </div>
+      <div id="csvSetup" style="display:none">
+        <div class="control-group">
+          <label class="group-label">Group Column</label>
+          <select id="groupColSel" class="styled-select"></select>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Value Column</label>
+          <select id="valueColSel" class="styled-select"></select>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Benchmark Group</label>
+          <select id="benchGroupSel" class="styled-select"></select>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Test Group</label>
+          <select id="testGroupSel" class="styled-select"></select>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Test Direction</label>
+          <div class="seg-control" id="csvTailDir">
+            <button class="seg-btn active" data-dir="left">Left</button>
+            <button class="seg-btn" data-dir="two">Two</button>
+            <button class="seg-btn" data-dir="right">Right</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">Data Type</label>
+          <div class="seg-control" id="csvDataType">
+            <button class="seg-btn active" data-type="mean">Mean</button>
+            <button class="seg-btn" data-type="proportion">Proportion</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="group-label">α level</label>
+          <div class="slider-row">
+            <input type="range" id="csvAlphaSlider" min="0.01" max="0.20" step="0.01" value="0.05"/>
+            <input type="number" id="csvAlphaBox" min="0.01" max="0.20" step="0.01" value="0.05" class="num-box"/>
+          </div>
+        </div>
+        <button class="run-btn" id="runCsvTest">Run Test</button>
+      </div>
+    </aside>
+
+    <div class="output-panel">
+      <h2 class="panel-title">CSV Analysis</h2>
+      <div id="csvSummary" style="display:none">
+        <h3 class="sub-title">Summary Statistics</h3>
+        <table class="stats-table">
+          <thead><tr><th>Group</th><th>n</th><th>Mean / p̂</th><th>Std Dev</th></tr></thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+      <div class="stats-row" id="csvStats" style="display:none">
+        <div class="stat-card"><div class="stat-label">z-statistic</div><div class="stat-val" id="csvZVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">p-value</div><div class="stat-val" id="csvPVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Critical Value</div><div class="stat-val" id="csvCritVal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Decision</div><div class="stat-val" id="csvDecision">—</div></div>
+      </div>
+      <div class="canvas-wrap" id="csvCanvasWrap" style="display:none">
+        <canvas id="csvCurve" width="620" height="280"></canvas>
+      </div>
+      <div class="conclusion-box" id="csvConclusionBox" style="display:none">
+        <span class="conclusion-label">Conclusion</span>
+        <p id="csvConclusionText">—</p>
+      </div>
+      <div class="empty-state" id="csvEmptyState">
+        <div class="empty-icon">📂</div>
+        <p>Upload a CSV file to begin the analysis.<br>
+        Use the example files: <code>example_mean_data.csv</code> or <code>example_proportion_data.csv</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>Global Economics · Grade 11 · Term 3 · C8–C10 · 2025–2026</p>
+  <p><a href="https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/" id="ghPagesLink">🔗 GitHub Pages Deployment Link</a></p>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   STATS — normal distribution, p-value, critical values
+══════════════════════════════════════════════════════════════ */
+const Stats = (() => {
+  function erf(x) {
+    const t = 1 / (1 + 0.3275911 * Math.abs(x));
+    const poly = t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));
+    const r = 1 - poly * Math.exp(-x * x);
+    return x >= 0 ? r : -r;
+  }
+  function normCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function normPDF(z) { return Math.exp(-0.5*z*z) / Math.sqrt(2*Math.PI); }
+  function pValue(z, tail) {
+    if (tail==='left')  return normCDF(z);
+    if (tail==='right') return 1 - normCDF(z);
+    return 2 * (1 - normCDF(Math.abs(z)));
+  }
+  function invNorm(p) {
+    const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+    const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];
+    const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+    const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+    const pLow=0.02425, pHigh=1-pLow; let q,r;
+    if(p<pLow){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+    else if(p<=pHigh){q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}
+    else{q=Math.sqrt(-2*Math.log(1-p));return-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  }
+  function criticalValue(alpha, tail) {
+    if(tail==='left')  return invNorm(alpha);
+    if(tail==='right') return invNorm(1-alpha);
+    return invNorm(1-alpha/2);
+  }
+  function zProportion(p0,pHat,n){const se=Math.sqrt(p0*(1-p0)/n);return se===0?0:(pHat-p0)/se;}
+  function zMean(mu0,xbar,sigma,n){const se=sigma/Math.sqrt(n);return se===0?0:(xbar-mu0)/se;}
+  function summaryStats(arr){
+    const n=arr.length;
+    if(n===0)return{n:0,mean:NaN,sd:NaN,proportion:NaN};
+    const mean=arr.reduce((s,v)=>s+v,0)/n;
+    const variance=arr.reduce((s,v)=>s+(v-mean)**2,0)/(n>1?n-1:1);
+    const sd=Math.sqrt(variance);
+    const proportion=arr.filter(v=>v===1).length/n;
+    return{n,mean,sd,proportion};
+  }
+  function zTwoGroupMean(s1,s2,tail){
+    const se=Math.sqrt(s1.sd**2/s1.n+s2.sd**2/s2.n);
+    if(se===0)return{z:0,p:1};
+    const z=(s2.mean-s1.mean)/se;
+    return{z,p:pValue(z,tail)};
+  }
+  function zTwoGroupProportion(s1,s2,tail){
+    const n1=s1.n,n2=s2.n,p1=s1.proportion,p2=s2.proportion;
+    const pPool=(p1*n1+p2*n2)/(n1+n2);
+    const se=Math.sqrt(pPool*(1-pPool)*(1/n1+1/n2));
+    if(se===0)return{z:0,p:1};
+    const z=(p2-p1)/se;
+    return{z,p:pValue(z,tail)};
+  }
+  return{normCDF,normPDF,pValue,criticalValue,invNorm,zProportion,zMean,summaryStats,zTwoGroupMean,zTwoGroupProportion};
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   CHART — draws normal curve on a canvas
+══════════════════════════════════════════════════════════════ */
+const NormalChart = (() => {
+  const C={curve:'#8a90a8',shade:'rgba(232,90,74,0.45)',shadeFail:'rgba(74,232,168,0.35)',
+           zLine:'#e8c84a',critLine:'#e85a4a',bg:'#1c2030',text:'#8a90a8',grid:'#272c3d',accent:'#e8c84a'};
+  function draw(canvas, zStat, alpha, tail, pVal) {
+    const ctx=canvas.getContext('2d');
+    const W=canvas.width,H=canvas.height;
+    const pL=40,pR=40,pT=24,pB=44;
+    const plotW=W-pL-pR, plotH=H-pT-pB;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
+    const zMin=-4,zMax=4,steps=400,dz=(zMax-zMin)/steps;
+    const maxPDF=Stats.normPDF(0);
+    const tx=z=>pL+((z-zMin)/(zMax-zMin))*plotW;
+    const ty=pdf=>pT+plotH-(pdf/maxPDF)*plotH*0.88;
+    const critZ=Stats.criticalValue(alpha,tail);
+    const isReject=pVal<=alpha;
+    ctx.fillStyle=isReject?C.shade:C.shadeFail;
+    ctx.beginPath();
+    if(tail==='left'){
+      ctx.moveTo(tx(zMin),ty(0));
+      for(let i=0;i<=steps;i++){const z=zMin+i*dz;if(z>zStat)break;ctx.lineTo(tx(z),ty(Stats.normPDF(z)));}
+      ctx.lineTo(tx(zStat),ty(0));
+    } else if(tail==='right'){
+      ctx.moveTo(tx(zStat),ty(0));
+      for(let i=0;i<=steps;i++){const z=zMin+i*dz;if(z<zStat)continue;ctx.lineTo(tx(z),ty(Stats.normPDF(z)));}
+      ctx.lineTo(tx(zMax),ty(0));
+    } else {
+      const absZ=Math.abs(zStat);
+      ctx.moveTo(tx(zMin),ty(0));
+      for(let i=0;i<=steps;i++){const z=zMin+i*dz;if(z>-absZ)break;ctx.lineTo(tx(z),ty(Stats.normPDF(z)));}
+      ctx.lineTo(tx(-absZ),ty(0));ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.fillStyle=isReject?C.shade:C.shadeFail;
+      ctx.moveTo(tx(absZ),ty(0));
+      for(let i=0;i<=steps;i++){const z=zMin+i*dz;if(z<absZ)continue;ctx.lineTo(tx(z),ty(Stats.normPDF(z)));}
+      ctx.lineTo(tx(zMax),ty(0));
+    }
+    ctx.closePath();ctx.fill();
+    // critical lines
+    ctx.strokeStyle=C.critLine;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+    const drawVline=x=>{ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,pT+plotH);ctx.stroke();};
+    if(tail==='two'){drawVline(tx(critZ));drawVline(tx(-critZ));}else{drawVline(tx(critZ));}
+    ctx.setLineDash([]);
+    // curve
+    ctx.beginPath();ctx.strokeStyle=C.curve;ctx.lineWidth=2;
+    for(let i=0;i<=steps;i++){const z=zMin+i*dz;i===0?ctx.moveTo(tx(z),ty(Stats.normPDF(z))):ctx.lineTo(tx(z),ty(Stats.normPDF(z)));}
+    ctx.stroke();
+    // z line
+    ctx.strokeStyle=C.zLine;ctx.lineWidth=2.5;
+    const zx=tx(Math.max(zMin,Math.min(zMax,zStat)));
+    ctx.beginPath();ctx.moveTo(zx,pT);ctx.lineTo(zx,pT+plotH);ctx.stroke();
+    // baseline
+    ctx.strokeStyle=C.grid;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pL,pT+plotH);ctx.lineTo(pL+plotW,pT+plotH);ctx.stroke();
+    // labels
+    ctx.fillStyle=C.text;ctx.font='11px DM Mono,monospace';ctx.textAlign='center';
+    [-3,-2,-1,0,1,2,3].forEach(v=>{
+      const x=tx(v);ctx.fillText(v,x,pT+plotH+16);
+      ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(x,pT+plotH);ctx.lineTo(x,pT+plotH+5);ctx.stroke();
+    });
+    ctx.fillStyle=C.accent;
+    const zClip=Math.max(zMin+0.3,Math.min(zMax-0.3,zStat));
+    ctx.fillText('z='+zStat.toFixed(3),tx(zClip),pT-8);
+    ctx.fillStyle=C.critLine;
+    if(tail==='two'){ctx.fillText('±'+Math.abs(critZ).toFixed(3),tx(critZ)+30,pT+plotH-8);}
+    else{ctx.fillText('zc='+critZ.toFixed(3),tx(critZ),pT+plotH-8);}
+    ctx.fillStyle='#fff';ctx.font='bold 11px DM Mono,monospace';
+    ctx.fillText('p='+pVal.toFixed(4),W/2,pT+plotH/2+4);
+  }
+  return{draw};
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   MANUAL MODE (C8)
+══════════════════════════════════════════════════════════════ */
+const Manual = (() => {
+  let calcMode='proportion', tailDir='left';
+  const g=id=>document.getElementById(id);
+  function getAlpha(){return parseFloat(g('alphaSlider').value);}
+  function getParams(){
+    if(calcMode==='proportion')return{p0:parseFloat(g('p0Slider').value),pHat:parseFloat(g('pHatSlider').value),n:parseFloat(g('nPropSlider').value)};
+    return{mu0:parseFloat(g('mu0Slider').value),xbar:parseFloat(g('xbarSlider').value),sd:parseFloat(g('sdSlider').value),n:parseFloat(g('nMeanSlider').value)};
+  }
+  function buildHyp(params){
+    const sym=tailDir==='left'?'<':tailDir==='right'?'>':'≠';
+    if(calcMode==='proportion')return{h0:'H₀: p = '+params.p0,h1:'H₁: p '+sym+' '+params.p0};
+    return{h0:'H₀: μ = '+params.mu0,h1:'H₁: μ '+sym+' '+params.mu0};
+  }
+  function buildConc(reject,alpha,pVal,params){
+    const ev=reject?'sufficient (p = '+pVal.toFixed(4)+' < α = '+alpha+') to reject H₀':'insufficient (p = '+pVal.toFixed(4)+' > α = '+alpha+') to reject H₀';
+    const dir=tailDir==='left'?'below':tailDir==='right'?'above':'different from';
+    if(calcMode==='proportion')
+      return'There is '+ev+'. The sample proportion (p̂ = '+params.pHat+') '+(reject?'is significantly '+dir:'does not differ significantly from')+' the benchmark (p₀ = '+params.p0+').';
+    return'There is '+ev+'. The sample mean (x̄ = '+params.xbar+') '+(reject?'is significantly '+dir:'does not differ significantly from')+' the benchmark (μ₀ = '+params.mu0+').';
+  }
+  function update(){
+    const alpha=getAlpha(), params=getParams();
+    const z=calcMode==='proportion'?Stats.zProportion(params.p0,params.pHat,params.n):Stats.zMean(params.mu0,params.xbar,params.sd,params.n);
+    const p=Stats.pValue(z,tailDir), critZ=Stats.criticalValue(alpha,tailDir), reject=p<=alpha;
+    g('zVal').textContent=z.toFixed(4);
+    g('pVal').textContent=p.toFixed(4);
+    g('critVal').textContent=tailDir==='two'?'±'+Math.abs(critZ).toFixed(4):critZ.toFixed(4);
+    const dec=g('decision');dec.textContent=reject?'Reject H₀':'Fail to reject H₀';dec.className='stat-val '+(reject?'reject':'fail');
+    const{h0,h1}=buildHyp(params);g('h0Text').textContent=h0;g('h1Text').textContent=h1;
+    const cb=g('conclusionBox');g('conclusionText').textContent=buildConc(reject,alpha,p,params);
+    cb.className='conclusion-box '+(reject?'reject-decision':'fail-decision');
+    NormalChart.draw(g('normalCurve'),z,alpha,tailDir,p);
+  }
+  function link(sliderId,boxId,cb){
+    const s=g(sliderId),b=g(boxId);
+    s.addEventListener('input',()=>{b.value=s.value;cb();});
+    b.addEventListener('input',()=>{let v=parseFloat(b.value);if(isNaN(v))return;v=Math.max(parseFloat(s.min),Math.min(parseFloat(s.max),v));s.value=v;b.value=v;cb();});
+  }
+  function init(){
+    g('calcMode').addEventListener('click',e=>{
+      const btn=e.target.closest('.seg-btn');if(!btn)return;
+      calcMode=btn.dataset.mode;
+      g('calcMode').querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      g('propParams').style.display=calcMode==='proportion'?'':'none';
+      g('meanParams').style.display=calcMode==='mean'?'':'none';
+      update();
+    });
+    g('tailDir').addEventListener('click',e=>{
+      const btn=e.target.closest('.seg-btn');if(!btn)return;
+      tailDir=btn.dataset.dir;
+      g('tailDir').querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      update();
+    });
+    link('alphaSlider','alphaBox',update);
+    link('p0Slider','p0Box',update);link('pHatSlider','pHatBox',update);link('nPropSlider','nPropBox',update);
+    link('mu0Slider','mu0Box',update);link('xbarSlider','xbarBox',update);link('sdSlider','sdBox',update);link('nMeanSlider','nMeanBox',update);
+    update();
+  }
+  return{init};
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   CSV MODE (C9)
+══════════════════════════════════════════════════════════════ */
+const CSVMode = (() => {
+  let parsedData=[],headers=[],csvTail='left',csvType='mean';
+  const g=id=>document.getElementById(id);
+  function parseCSV(text){
+    const lines=text.trim().split(/\r?\n/);if(lines.length<2)return{headers:[],rows:[]};
+    const delim=lines[0].includes(';')?';':',';
+    const hdrs=lines[0].split(delim).map(h=>h.trim().replace(/^"|"$/g,''));
+    const rows=lines.slice(1).filter(l=>l.trim()).map(l=>{
+      const cells=l.split(delim).map(c=>c.trim().replace(/^"|"$/g,''));
+      const row={};hdrs.forEach((h,i)=>{row[h]=cells[i]??'';});return row;
+    });
+    return{headers:hdrs,rows};
+  }
+  function updateGroupOptions(){
+    const gc=g('groupColSel').value;
+    const uniq=[...new Set(parsedData.map(r=>r[gc]).filter(Boolean))];
+    const bs=g('benchGroupSel'),ts=g('testGroupSel');
+    bs.innerHTML=ts.innerHTML='';
+    uniq.forEach((grp,i)=>{
+      [bs,ts].forEach((sel,si)=>{const o=document.createElement('option');o.value=o.textContent=grp;if(i===si)o.selected=true;sel.appendChild(o);});
+    });
+    if(uniq.length>=2)ts.selectedIndex=1;
+  }
+  function populateSelects(){
+    const gs=g('groupColSel'),vs=g('valueColSel');
+    gs.innerHTML=vs.innerHTML='';
+    headers.forEach(h=>{
+      [gs,vs].forEach(sel=>{const o=document.createElement('option');o.value=o.textContent=h;sel.appendChild(o);});
+    });
+    if(headers.length>=2)vs.selectedIndex=1;
+    updateGroupOptions();
+    gs.addEventListener('change',updateGroupOptions);
+  }
+  function runTest(){
+    const gc=g('groupColSel').value,vc=g('valueColSel').value;
+    const bg=g('benchGroupSel').value,tg=g('testGroupSel').value;
+    const alpha=parseFloat(g('csvAlphaSlider').value);
+    if(bg===tg){alert('Benchmark and test groups must be different.');return;}
+    const bRows=parsedData.filter(r=>r[gc]===bg).map(r=>parseFloat(r[vc])).filter(v=>!isNaN(v));
+    const tRows=parsedData.filter(r=>r[gc]===tg).map(r=>parseFloat(r[vc])).filter(v=>!isNaN(v));
+    if(bRows.length<2||tRows.length<2){alert('Each group needs at least 2 numeric values.');return;}
+    const s1=Stats.summaryStats(bRows),s2=Stats.summaryStats(tRows);
+    const tbody=g('summaryBody');tbody.innerHTML='';
+    const isMean=csvType==='mean';
+    [[bg,s1],[tg,s2]].forEach(([lbl,s])=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${lbl}</td><td>${s.n}</td><td>${isMean?s.mean.toFixed(4):s.proportion.toFixed(4)}</td><td>${isMean?s.sd.toFixed(4):'—'}</td>`;
+      tbody.appendChild(tr);
+    });
+    g('csvSummary').style.display='';
+    const res=isMean?Stats.zTwoGroupMean(s1,s2,csvTail):Stats.zTwoGroupProportion(s1,s2,csvTail);
+    const{z,p}=res,critZ=Stats.criticalValue(alpha,csvTail),reject=p<=alpha;
+    g('csvZVal').textContent=z.toFixed(4);
+    g('csvPVal').textContent=p.toFixed(4);
+    g('csvCritVal').textContent=csvTail==='two'?'±'+Math.abs(critZ).toFixed(4):critZ.toFixed(4);
+    const dec=g('csvDecision');dec.textContent=reject?'Reject H₀':'Fail to reject H₀';dec.className='stat-val '+(reject?'reject':'fail');
+    const mB=isMean?'mean = '+s1.mean.toFixed(3):'p̂ = '+s1.proportion.toFixed(3);
+    const mT=isMean?'mean = '+s2.mean.toFixed(3):'p̂ = '+s2.proportion.toFixed(3);
+    const ev=reject?'sufficient (p = '+p.toFixed(4)+' ≤ α = '+alpha+')':'insufficient (p = '+p.toFixed(4)+' > α = '+alpha+')';
+    const conc='There is '+ev+' evidence to '+(reject?'reject':'fail to reject')+' H₀. The '+(isMean?'mean':'proportion')+' of group "'+tg+'" ('+mT+') '+(reject?'differs significantly':'does not differ significantly')+' from group "'+bg+'" ('+mB+') at a '+(alpha*100).toFixed(0)+'% significance level ('+csvTail+'-tailed).';
+    const cb=g('csvConclusionBox');g('csvConclusionText').textContent=conc;cb.className='conclusion-box '+(reject?'reject-decision':'fail-decision');
+    g('csvStats').style.display='';g('csvCanvasWrap').style.display='';cb.style.display='';g('csvEmptyState').style.display='none';
+    NormalChart.draw(g('csvCurve'),z,alpha,csvTail,p);
+  }
+  function handleFile(file){
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const{headers:hdrs,rows}=parseCSV(e.target.result);
+      if(!hdrs.length){alert('Could not parse CSV.');return;}
+      headers=hdrs;parsedData=rows;
+      g('csvSetup').style.display='';g('uploadZone').style.display='none';
+      populateSelects();
+    };
+    reader.readAsText(file);
+  }
+  function init(){
+    const zone=g('uploadZone'),fi=g('csvFile');
+    zone.addEventListener('click',()=>fi.click());
+    fi.addEventListener('change',()=>handleFile(fi.files[0]));
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragging');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('dragging'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragging');handleFile(e.dataTransfer.files[0]);});
+    g('csvTailDir').addEventListener('click',e=>{
+      const btn=e.target.closest('.seg-btn');if(!btn)return;
+      csvTail=btn.dataset.dir;g('csvTailDir').querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    });
+    g('csvDataType').addEventListener('click',e=>{
+      const btn=e.target.closest('.seg-btn');if(!btn)return;
+      csvType=btn.dataset.type;g('csvDataType').querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    });
+    const as=g('csvAlphaSlider'),ab=g('csvAlphaBox');
+    as.addEventListener('input',()=>{ab.value=as.value;});
+    ab.addEventListener('input',()=>{let v=parseFloat(ab.value);if(!isNaN(v)){v=Math.max(.01,Math.min(.20,v));as.value=v;ab.value=v;}});
+    g('runCsvTest').addEventListener('click',runTest);
+  }
+  return{init};
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN — tabs + init
+══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+t));
+    });
+  });
+  Manual.init();
+  CSVMode.init();
+});
+</script>
+</body>
+</html>
